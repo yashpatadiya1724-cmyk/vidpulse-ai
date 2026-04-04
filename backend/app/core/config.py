@@ -37,8 +37,8 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-# Fix Railway PostgreSQL URL (uses postgres:// but SQLAlchemy needs postgresql+asyncpg://)
+# Fix Render/Railway PostgreSQL URL for asyncpg
 if settings.DATABASE_URL.startswith("postgres://"):
-    settings.DATABASE_URL = settings.DATABASE_URL.replace(
-        "postgres://", "postgresql+asyncpg://", 1
-    )
+    settings.DATABASE_URL = settings.DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+elif settings.DATABASE_URL.startswith("postgresql://"):
+    settings.DATABASE_URL = settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
