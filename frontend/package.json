@@ -1,0 +1,38 @@
+{
+  "name": "vidpulse-ai-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "next": "14.0.0",
+    "tailwindcss": "3.3.5",
+    "framer-motion": "10.16.4",
+    "recharts": "2.9.3",
+    "d3": "7.8.5",
+    "@tanstack/react-query": "5.8.4",
+    "zustand": "4.4.6",
+    "socket.io-client": "4.6.1",
+    "react-dropzone": "14.2.3",
+    "axios": "1.6.2",
+    "react-hot-toast": "2.4.1",
+    "lucide-react": "0.294.0"
+  },
+  "devDependencies": {
+    "@types/react": "18.2.0",
+    "@types/react-dom": "18.2.0",
+    "@types/node": "20.0.0",
+    "@types/d3": "7.4.3",
+    "typescript": "5.2.2",
+    "autoprefixer": "10.4.16",
+    "postcss": "8.4.31",
+    "eslint": "8.52.0",
+    "eslint-config-next": "14.0.0"
+  }
+}

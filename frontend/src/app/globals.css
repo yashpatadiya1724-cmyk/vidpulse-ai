@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { font-size: 16px; }
+  body {
+    @apply bg-[#0d0d14] text-gray-100 antialiased;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  }
+}
+
+@layer utilities {
+  .glass       { @apply bg-white/5 backdrop-blur-xl border border-white/10; }
+  .card        { @apply bg-[#161622] border border-[#1e1e2e] rounded-2xl; }
+  .card-sm     { @apply bg-[#1a1a28] border border-[#222235] rounded-xl; }
+  .gradient-text { @apply bg-gradient-to-r from-sky-400 via-violet-400 to-pink-400 bg-clip-text text-transparent; }
+  .btn-primary { @apply bg-gradient-to-r from-sky-500 to-violet-600 hover:opacity-90 active:scale-95 transition-all font-semibold rounded-2xl; }
+  .btn-ghost   { @apply bg-white/5 hover:bg-white/10 active:scale-95 transition-all rounded-2xl border border-white/10; }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 16px); }
+}
+
+/* Mobile-style scrollbar */
+::-webkit-scrollbar { width: 0px; }
+
+/* Smooth tap highlight removal */
+* { -webkit-tap-highlight-color: transparent; }
+
+/* Bottom nav safe area */
+.bottom-nav {
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
