@@ -1,0 +1,27 @@
+name: VidPulse AI Analytics CI
+
+on:
+  push:
+    branches: [ main, chore/**, feat/** ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Run Video Analytics Engine Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Test Dependencies
+        run: pip install numpy
+
+      - name: Run Analytics Unit Tests
+        run: python backend/tests/test_analytics_engine.py

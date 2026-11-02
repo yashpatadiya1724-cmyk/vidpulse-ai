@@ -3,7 +3,10 @@ AI Service — fast heuristic engagement scoring.
 Optical flow uses minimal settings for speed. No deep learning required.
 """
 import numpy as np
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
 from typing import List
 from app.core.config import settings
 

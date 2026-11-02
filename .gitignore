@@ -1,9 +1,51 @@
+# Dependencies
 node_modules/
-.env
-*.db
-__pycache__/
-*.pyc
-uploads/
+.npm/
+
+# Production Builds
 .next/
+out/
 dist/
 build/
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+
+# Databases & Media Storage
+*.db
+*.sqlite3
+uploads/
+videos/
+processed/
+temp/
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+coverage/
+
+# Mobile Builds
+vidpulse-mobile/android/app/build/
+vidpulse-mobile/android/.gradle/
+vidpulse-mobile/ios/Pods/
+
+# OS & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
