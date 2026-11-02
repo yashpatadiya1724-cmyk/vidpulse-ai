@@ -12,13 +12,12 @@ AI video engagement analytics engine with frame-by-frame attention scoring, heat
 - **Frame-by-Frame Engagement Scoring:** Combines proxy optical flow motion magnitude with luminance variance to compute second-by-second attention scores.
 - **Automated Attention Drop Isolation:** 1D convolution smoothing kernel automatically marks drop segments and categorizes drop severity (`critical`, `high`, `medium`, `low`).
 - **Hook & Virality Metrics:** Identifies retention drop-off in the first 3 seconds to optimize video hooks and opening pacing.
-- **WebSocket Live Progress:** Asynchronous Celery background processing with real-time WebSocket status updates.
+- **Fast Analytics Processing:** Asynchronous background processing with real-time progress status updates.
 - **Multi-Platform Ready:** Next.js 14 responsive web dashboard and React Native mobile companion app.
 
 ## Tech Stack
 - **Frontend:** Next.js 14, TypeScript, Tailwind CSS, Recharts, Framer Motion
-- **Backend:** FastAPI, Python 3.11, SQLAlchemy (PostgreSQL), Motor (MongoDB)
-- **Background Workers:** Celery, Redis
+- **Backend:** FastAPI, Python 3.11, SQLAlchemy (PostgreSQL / SQLite), Pydantic v2
 - **Computer Vision:** OpenCV (Farneback Optical Flow), NumPy
 - **Deployment:** Docker Compose, Railway, Render, GitHub Actions CI/CD
 
@@ -28,17 +27,17 @@ AI video engagement analytics engine with frame-by-frame attention scoring, heat
 flowchart TD
     User["Creator Client (Next.js / Mobile)"]
     API["FastAPI Gateway"]
-    CeleryWorker["Celery Worker (FFmpeg Frame Extraction)"]
+    AsyncWorker["Async Pipeline (FFmpeg Frame Extraction)"]
     CVEngine["Computer Vision Optical Flow & Variance Engine"]
     ConvFilter["1D Convolution Smoothing & Drop Detection"]
-    DB[(PostgreSQL / MongoDB / MinIO)]
+    DB[(PostgreSQL / MinIO S3)]
 
     User -->|Upload Video| API
-    API -->|Dispatch Task| CeleryWorker
-    CeleryWorker --> CVEngine
+    API -->|Dispatch Task| AsyncWorker
+    AsyncWorker --> CVEngine
     CVEngine --> ConvFilter
     ConvFilter --> DB
-    API -->|WebSocket Live Telemetry| User
+    API -->|Progress Status| User
 ```
 
 ## Getting Started
