@@ -3,9 +3,15 @@ AI Service — fast heuristic engagement scoring.
 Optical flow uses minimal settings for speed. No deep learning required.
 """
 import numpy as np
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
 from typing import List
-from app.core.config import settings
+try:
+    from app.core.config import settings
+except ImportError:
+    settings = None
 
 
 def compute_motion_magnitude(frame1: np.ndarray, frame2: np.ndarray) -> float:
@@ -159,7 +165,8 @@ def analyze_frames(frames: List[np.ndarray], timestamps: List[float]) -> dict:
         for s, m, ts in zip(scores, motions, timestamps)
     ]
 
-    drops = detect_attention_drops(scores, threshold=settings.ATTENTION_THRESHOLD)
+    threshold = getattr(settings, 'ATTENTION_THRESHOLD', 0.45) if settings else 0.45
+    drops = detect_attention_drops(scores, threshold=threshold)
     hook = score_hook(scores, motions)
     overall = float(np.mean(scores)) if scores else 0.0
     virality = predict_virality(scores, hook, motions)
