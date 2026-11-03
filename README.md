@@ -1,10 +1,12 @@
 # VidPulse AI
 
+[![VidPulse AI Analytics CI](https://github.com/yashpatadiya1724-cmyk/vidpulse-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/yashpatadiya1724-cmyk/vidpulse-ai/actions/workflows/ci.yml)
+[![Python 3.11](https://img.shields.io/badge/Python-3.11-blue.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 AI video engagement analytics engine with frame-by-frame attention scoring, heatmaps, and hook optimization.
 
-[Live demo](TODO: owner to add) | [Docs](docs/DESIGN.md) | [License](LICENSE)
-
-![Screenshot](docs/screenshot.png)  <!-- TODO: owner to add -->
+[Live demo](TODO: owner to add) | [Docs](docs/DESIGN.md) | [Security Policy](docs/SECURITY.md) | [License](LICENSE)
 
 ---
 
@@ -65,9 +67,9 @@ flowchart TD
    ```
    Open `http://localhost:3000` to access the web dashboard.
 
-4. Run tests:
+4. Run automated test suite:
    ```bash
-   python backend/tests/test_analytics_engine.py
+   pytest backend/tests/ -v
    ```
 
 ## Environment Variables
@@ -91,6 +93,7 @@ flowchart TD
 - **What the Analytics Computes:** The attention score is **heuristic-based**. It does not track human eyeballs directly; instead, it models audience retention by computing frame-by-frame visual motion energy via Farneback optical flow (downsampled to 2 FPS), combined with frame luminance variance, scene cut detection, and 1D moving average convolution smoothing. Audio energy spikes and 3-second hook retention are computed from heuristic thresholds.
 - **Data Isolation:** Uploaded video files are stored in private object storage with short-lived presigned URLs.
 - **Known Limitations:** Optical flow is proxy-sampled at 2 FPS to preserve compute efficiency; ultra-fast sub-second flashes may be smoothed by the moving average window.
+- **Security Policy:** Full disclosure guidelines and vulnerability SLAs are documented in [docs/SECURITY.md](docs/SECURITY.md).
 
 ## Roadmap
 - [x] Fast heuristic optical flow engagement scoring

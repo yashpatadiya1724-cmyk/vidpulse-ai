@@ -21,7 +21,9 @@ jobs:
           python-version: '3.11'
 
       - name: Install Test Dependencies
-        run: pip install numpy pydantic pydantic-settings
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest numpy pydantic pydantic-settings
 
       - name: Run Analytics Unit Tests
-        run: python backend/tests/test_analytics_engine.py
+        run: pytest backend/tests/ -v
