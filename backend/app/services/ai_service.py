@@ -16,7 +16,17 @@ except ImportError:
 
 def compute_motion_magnitude(frame1: np.ndarray, frame2: np.ndarray) -> float:
     """Fast optical flow — small image, minimal iterations."""
-    # Resize to tiny for speed
+    if frame1 is None or frame2 is None or frame1.size == 0 or frame2.size == 0:
+        return 0.0
+
+    if cv2 is None:
+        f1 = np.mean(frame1, axis=2) if len(frame1.shape) == 3 else frame1
+        f2 = np.mean(frame2, axis=2) if len(frame2.shape) == 3 else frame2
+        min_h = min(f1.shape[0], f2.shape[0])
+        min_w = min(f1.shape[1], f2.shape[1])
+        diff = np.abs(f2[:min_h, :min_w].astype(float) - f1[:min_h, :min_w].astype(float))
+        return float(np.mean(diff)) / 25.0
+
     small1 = cv2.resize(frame1, (160, 90))
     small2 = cv2.resize(frame2, (160, 90))
     gray1 = cv2.cvtColor(small1, cv2.COLOR_BGR2GRAY)
@@ -31,7 +41,12 @@ def compute_motion_magnitude(frame1: np.ndarray, frame2: np.ndarray) -> float:
 
 
 def heuristic_engagement_score(frame: np.ndarray, motion: float) -> float:
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    if frame is None or frame.size == 0:
+        return 0.0
+    if cv2 is not None:
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if len(frame.shape) == 3 else frame
+    else:
+        gray = np.mean(frame, axis=2).astype(np.uint8) if len(frame.shape) == 3 else frame
     brightness_var = float(np.std(gray)) / 128.0
     score = 0.4 * min(brightness_var, 1.0) + 0.6 * min(motion / 5.0, 1.0)
     return float(np.clip(score, 0.0, 1.0))
@@ -142,7 +157,7 @@ def compute_visual_saliency(frame: np.ndarray, grid_size: int = 8) -> dict:
     Computes visual saliency and focal concentration using spatial gradient intensity
     and luminance contrast. Downsamples to an NxN heatmap grid.
     """
-    if frame is None or frame.size == 0 or cv2 is None:
+    if frame is None or frame.size == 0:
         return {
             "focal_concentration": 0.0,
             "centroid": {"x": 0.5, "y": 0.5},
@@ -150,18 +165,32 @@ def compute_visual_saliency(frame: np.ndarray, grid_size: int = 8) -> dict:
             "visual_clutter": 0.0,
         }
 
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if len(frame.shape) == 3 else frame
-    small = cv2.resize(gray, (160, 90))
+    if cv2 is not None:
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if len(frame.shape) == 3 else frame
+        small = cv2.resize(gray, (160, 90))
+        grad_x = cv2.Sobel(small, cv2.CV_32F, 1, 0, ksize=3)
+        grad_y = cv2.Sobel(small, cv2.CV_32F, 0, 1, ksize=3)
+        magnitude = cv2.magnitude(grad_x, grad_y)
+        max_val = float(np.max(magnitude))
+        saliency_map = (magnitude / (max_val + 1e-6))
+        grid = cv2.resize(saliency_map, (grid_size, grid_size), interpolation=cv2.INTER_AREA)
+        grid_normalized = np.clip(grid, 0.0, 1.0).tolist()
+    else:
+        gray = np.mean(frame, axis=2) if len(frame.shape) == 3 else frame
+        gy, gx = np.gradient(gray.astype(float))
+        magnitude = np.sqrt(gx**2 + gy**2)
+        max_val = float(np.max(magnitude))
+        saliency_map = (magnitude / (max_val + 1e-6))
+        h, w = saliency_map.shape
+        grid_normalized = []
+        for r in range(grid_size):
+            row = []
+            for c in range(grid_size):
+                cell = saliency_map[r*h//grid_size:max((r+1)*h//grid_size, r*h//grid_size+1),
+                                     c*w//grid_size:max((c+1)*w//grid_size, c*w//grid_size+1)]
+                row.append(float(np.mean(cell)) if cell.size > 0 else 0.0)
+            grid_normalized.append(row)
 
-    grad_x = cv2.Sobel(small, cv2.CV_32F, 1, 0, ksize=3)
-    grad_y = cv2.Sobel(small, cv2.CV_32F, 0, 1, ksize=3)
-    magnitude = cv2.magnitude(grad_x, grad_y)
-
-    max_val = float(np.max(magnitude))
-    saliency_map = (magnitude / (max_val + 1e-6))
-
-    grid = cv2.resize(saliency_map, (grid_size, grid_size), interpolation=cv2.INTER_AREA)
-    grid_normalized = np.clip(grid, 0.0, 1.0).tolist()
     grid_normalized = [[round(cell, 3) for cell in row] for row in grid_normalized]
 
     total_mass = float(np.sum(saliency_map))
@@ -314,8 +343,12 @@ def analyze_frames(frames: List[np.ndarray], timestamps: List[float]) -> dict:
     for f in frames:
         h, w = f.shape[:2]
         if max(h, w) > 320:
-            scale = 320 / max(h, w)
-            f = cv2.resize(f, (int(w*scale), int(h*scale)))
+            if cv2 is not None:
+                scale = 320 / max(h, w)
+                f = cv2.resize(f, (int(w*scale), int(h*scale)))
+            else:
+                step = max(1, max(h, w) // 320)
+                f = f[::step, ::step]
         resized.append(f)
 
     for i, frame in enumerate(resized):
