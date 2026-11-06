@@ -137,12 +137,175 @@ def generate_recommendations(hook_score: int, drops: List[dict], overall_score: 
     return recs
 
 
+def compute_visual_saliency(frame: np.ndarray, grid_size: int = 8) -> dict:
+    """
+    Computes visual saliency and focal concentration using spatial gradient intensity
+    and luminance contrast. Downsamples to an NxN heatmap grid.
+    """
+    if frame is None or frame.size == 0 or cv2 is None:
+        return {
+            "focal_concentration": 0.0,
+            "centroid": {"x": 0.5, "y": 0.5},
+            "heatmap_grid": [[0.0] * grid_size for _ in range(grid_size)],
+            "visual_clutter": 0.0,
+        }
+
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if len(frame.shape) == 3 else frame
+    small = cv2.resize(gray, (160, 90))
+
+    grad_x = cv2.Sobel(small, cv2.CV_32F, 1, 0, ksize=3)
+    grad_y = cv2.Sobel(small, cv2.CV_32F, 0, 1, ksize=3)
+    magnitude = cv2.magnitude(grad_x, grad_y)
+
+    max_val = float(np.max(magnitude))
+    saliency_map = (magnitude / (max_val + 1e-6))
+
+    grid = cv2.resize(saliency_map, (grid_size, grid_size), interpolation=cv2.INTER_AREA)
+    grid_normalized = np.clip(grid, 0.0, 1.0).tolist()
+    grid_normalized = [[round(cell, 3) for cell in row] for row in grid_normalized]
+
+    total_mass = float(np.sum(saliency_map))
+    if total_mass > 0:
+        y_indices, x_indices = np.indices(saliency_map.shape)
+        cx = float(np.sum(x_indices * saliency_map) / (total_mass * saliency_map.shape[1]))
+        cy = float(np.sum(y_indices * saliency_map) / (total_mass * saliency_map.shape[0]))
+    else:
+        cx, cy = 0.5, 0.5
+
+    variance = float(np.var(saliency_map))
+    focal_concentration = round(min(1.0, variance * 25.0), 3)
+    visual_clutter = round(max(0.0, 1.0 - focal_concentration), 3)
+
+    return {
+        "focal_concentration": focal_concentration,
+        "centroid": {"x": round(cx, 3), "y": round(cy, 3)},
+        "heatmap_grid": grid_normalized,
+        "visual_clutter": visual_clutter,
+    }
+
+
+def compute_retention_curve(timeline_scores: List[float], hook_score: int, drops: List[dict] = None) -> dict:
+    """
+    Models frame-by-frame audience retention decay based on hook strength,
+    motion pacing, and detected attention drop segments.
+    """
+    if not timeline_scores:
+        return {
+            "retention_points": [],
+            "drop_off_velocity_3s": 0.0,
+            "drop_off_velocity_5s": 0.0,
+            "half_life_sec": None,
+            "final_retention": 0.0,
+            "retention_profile": "flatliner",
+        }
+
+    drops = drops or []
+    drop_lookup = set()
+    for d in drops:
+        severity_mult = 2.5 if d.get("severity") == "critical" else (1.8 if d.get("severity") == "high" else 1.2)
+        for s in range(d.get("start_sec", 0), d.get("end_sec", 0) + 1):
+            drop_lookup.add((s, severity_mult))
+
+    points = []
+    current_retention = 100.0
+
+    for sec, score in enumerate(timeline_scores):
+        if sec == 0:
+            points.append({"second": 0, "retention_pct": 100.0, "drop_rate": 0.0})
+            continue
+
+        base_decay = 0.6 + max(0.0, (1.0 - score) * 1.4)
+
+        if sec <= 3:
+            if hook_score >= 75:
+                hook_factor = 0.35
+            elif hook_score >= 50:
+                hook_factor = 0.8
+            else:
+                hook_factor = 2.2
+            base_decay *= hook_factor
+        elif sec <= 5:
+            if hook_score < 40:
+                base_decay *= 1.5
+
+        drop_penalties = [mult for s, mult in drop_lookup if s == sec]
+        if drop_penalties:
+            base_decay *= max(drop_penalties)
+
+        drop_rate = min(current_retention, base_decay)
+        current_retention = max(2.0, current_retention - drop_rate)
+
+        points.append({
+            "second": sec,
+            "retention_pct": round(current_retention, 2),
+            "drop_rate": round(drop_rate, 2),
+        })
+
+    n = len(points)
+    ret_3s = points[min(3, n - 1)]["retention_pct"]
+    ret_5s = points[min(5, n - 1)]["retention_pct"]
+    drop_3s = round(100.0 - ret_3s, 2)
+    drop_5s = round(100.0 - ret_5s, 2)
+
+    half_life = next((p["second"] for p in points if p["retention_pct"] <= 50.0), None)
+    final_ret = points[-1]["retention_pct"] if points else 0.0
+
+    if drop_3s <= 12.0 and final_ret >= 55.0:
+        profile = "viral_hook"
+    elif drop_3s >= 25.0:
+        profile = "cliff_drop"
+    elif drop_3s < 25.0 and final_ret >= 30.0:
+        profile = "steady_burn"
+    else:
+        profile = "flatliner"
+
+    return {
+        "retention_points": points,
+        "drop_off_velocity_3s": drop_3s,
+        "drop_off_velocity_5s": drop_5s,
+        "half_life_sec": half_life,
+        "final_retention": round(final_ret, 2),
+        "retention_profile": profile,
+    }
+
+
+def generate_hook_dropoff_heatmap(timeline_scores: List[float], drops: List[dict] = None) -> List[dict]:
+    """
+    Generates a heat-intensity matrix identifying high-risk viewer drop-off hotzones.
+    """
+    heatmap = []
+    drops = drops or []
+
+    for sec, score in enumerate(timeline_scores):
+        matching_drop = next((d for d in drops if d.get("start_sec", 0) <= sec <= d.get("end_sec", 0)), None)
+
+        if matching_drop and matching_drop.get("severity") in ["critical", "high"]:
+            risk_level = "critical_drop"
+            heat_intensity = 0.95
+        elif matching_drop or score < 0.40:
+            risk_level = "warning"
+            heat_intensity = 0.65
+        else:
+            risk_level = "safe"
+            heat_intensity = round(max(0.05, 1.0 - score), 2)
+
+        heatmap.append({
+            "second": sec,
+            "attention_score": round(score, 3),
+            "risk_level": risk_level,
+            "heat_intensity": heat_intensity,
+        })
+
+    return heatmap
+
+
 def analyze_frames(frames: List[np.ndarray], timestamps: List[float]) -> dict:
     """
     Fast pipeline:
     - Resize frames to 320px max before processing
     - Optical flow on 160x90 thumbnails
-    - All numpy, no deep learning
+    - Visual saliency & retention curve modeling
+    - All numpy/opencv, no heavy deep learning
     """
     scores, motions = [], []
 
@@ -172,6 +335,17 @@ def analyze_frames(frames: List[np.ndarray], timestamps: List[float]) -> dict:
     virality = predict_virality(scores, hook, motions)
     recs = generate_recommendations(hook, drops, overall)
 
+    saliencies = [compute_visual_saliency(f) for f in resized]
+    retention_data = compute_retention_curve(scores, hook, drops)
+    heatmap_matrix = generate_hook_dropoff_heatmap(scores, drops)
+
+    for i, item in enumerate(timeline):
+        if i < len(retention_data.get("retention_points", [])):
+            item["retention_pct"] = retention_data["retention_points"][i]["retention_pct"]
+        if i < len(saliencies):
+            item["focal_concentration"] = saliencies[i]["focal_concentration"]
+            item["centroid"] = saliencies[i]["centroid"]
+
     return {
         "timeline": timeline,
         "drops": drops,
@@ -179,4 +353,6 @@ def analyze_frames(frames: List[np.ndarray], timestamps: List[float]) -> dict:
         "overall_score": round(overall, 4),
         "virality_score": virality,
         "recommendations": recs,
+        "retention_curve": retention_data,
+        "heatmap": heatmap_matrix,
     }
