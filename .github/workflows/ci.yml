@@ -2,23 +2,28 @@ name: VidPulse AI Analytics CI
 
 on:
   push:
-    branches: [ main, chore/**, feat/**, fix/** ]
+    branches: [ main, 'chore/**', 'feat/**', 'fix/**' ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   test:
-    name: Run Video Analytics Engine Tests
+    name: Video Analytics Tests (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ matrix.python-version }}
 
       - name: Install Test Dependencies
         run: |

@@ -1,12 +1,13 @@
 # VidPulse AI
 
 [![VidPulse AI Analytics CI](https://github.com/yashpatadiya1724-cmyk/vidpulse-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/yashpatadiya1724-cmyk/vidpulse-ai/actions/workflows/ci.yml)
-[![Python 3.11](https://img.shields.io/badge/Python-3.11-blue.svg)](https://www.python.org/)
+[![Sponsor](https://img.shields.io/badge/Sponsor-Mansitra%20Foundation-ea4aaa?style=flat&logo=github-sponsors)](https://www.mansitra.in/)
+[![Python 3.11 | 3.12](https://img.shields.io/badge/Python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 AI video engagement analytics engine with frame-by-frame attention scoring, heatmaps, and hook optimization.
 
-[Live demo](TODO: owner to add) | [Docs](docs/DESIGN.md) | [Security Policy](docs/SECURITY.md) | [License](LICENSE)
+[Docs](docs/DESIGN.md) | [Security Policy](SECURITY.md) | [Sponsor](https://www.mansitra.in/) | [License](LICENSE)
 
 ---
 

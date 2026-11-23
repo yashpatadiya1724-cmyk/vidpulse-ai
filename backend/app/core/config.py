@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 import os
 
@@ -30,9 +30,7 @@ class Settings(BaseSettings):
     FRAMES_PER_SECOND: int = 1
     ATTENTION_THRESHOLD: float = 0.45
 
-    class Config:
-        env_file = ".env"
-        extra = "ignore"
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
 settings = Settings()
