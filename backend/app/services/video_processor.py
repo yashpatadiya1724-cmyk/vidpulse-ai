@@ -65,5 +65,54 @@ class VideoProcessor:
         scale = self.max_dimension / max(h, w)
         return cv2.resize(frame, (int(w * scale), int(h * scale)))
 
+    def compute_thumbnail_metrics(self, frame: np.ndarray) -> dict:
+        """Computes aesthetic and attention metrics for candidate video thumbnails."""
+        if frame is None or frame.size == 0:
+            return {
+                "brightness": 0.0,
+                "contrast": 0.0,
+                "sharpness": 0.0,
+                "colorfulness": 0.0,
+                "thumbnail_score": 0.0,
+                "is_recommended": False,
+            }
+
+        # 1. Grayscale luminance & contrast
+        if len(frame.shape) == 3 and frame.shape[2] == 3:
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            # Hasler and Süsstrunk colorfulness metric
+            (B, G, R) = cv2.split(frame.astype("float"))
+            rg = np.abs(R - G)
+            yb = np.abs(0.5 * (R + G) - B)
+            std_root = np.sqrt(np.std(rg) ** 2 + np.std(yb) ** 2)
+            mean_root = np.sqrt(np.mean(rg) ** 2 + np.mean(yb) ** 2)
+            colorfulness = float(std_root + (0.3 * mean_root))
+        else:
+            gray = frame
+            colorfulness = 0.0
+
+        brightness = float(np.mean(gray)) / 255.0
+        contrast = float(np.std(gray)) / 128.0
+
+        # Sharpness via Laplacian variance
+        sharpness = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+
+        # Normalize metrics to heuristic 0-100 score
+        b_score = max(0.0, 1.0 - abs(brightness - 0.55) * 2) * 25.0
+        c_score = min(25.0, contrast * 25.0)
+        s_score = min(25.0, (sharpness / 150.0) * 25.0)
+        col_score = min(25.0, (colorfulness / 40.0) * 25.0)
+
+        total_score = round(b_score + c_score + s_score + col_score, 1)
+
+        return {
+            "brightness": round(brightness, 3),
+            "contrast": round(contrast, 3),
+            "sharpness": round(sharpness, 2),
+            "colorfulness": round(colorfulness, 2),
+            "thumbnail_score": total_score,
+            "is_recommended": total_score >= 60.0,
+        }
+
 
 video_processor = VideoProcessor()
