@@ -98,5 +98,15 @@ def test_recommendation_generation():
     assert "Low overall engagement score" in problems
 
 
+def test_settings_and_environment_defaults():
+    """Verify application configuration defaults and Pydantic v2 settings loading."""
+    from app.core.config import Settings
+    cfg = Settings()
+    assert cfg.ALGORITHM == "HS256"
+    assert cfg.FRAMES_PER_SECOND >= 1
+    assert 0 < cfg.ATTENTION_THRESHOLD < 1.0
+    assert cfg.BATCH_SIZE >= 1
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
