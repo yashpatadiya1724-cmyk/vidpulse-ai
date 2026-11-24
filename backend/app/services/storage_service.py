@@ -3,7 +3,10 @@ Storage service — local filesystem for dev, persists to /tmp on Railway.
 For production with large files, configure S3/Cloudflare R2.
 """
 import os
-import aiofiles
+try:
+    import aiofiles
+except ImportError:
+    aiofiles = None
 from app.core.config import settings
 
 # Railway has ephemeral filesystem — use /tmp which persists during container lifetime

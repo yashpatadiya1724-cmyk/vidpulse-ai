@@ -16,7 +16,10 @@ from app.services.ai_service import (
     score_hook,
     predict_virality,
     generate_recommendations,
+    compute_motion_magnitude,
+    heuristic_engagement_score,
 )
+from app.services.storage_service import StorageService, LOCAL_STORAGE_DIR
 
 
 def test_severity_classification():
@@ -106,6 +109,52 @@ def test_settings_and_environment_defaults():
     assert cfg.FRAMES_PER_SECOND >= 1
     assert 0 < cfg.ATTENTION_THRESHOLD < 1.0
     assert cfg.BATCH_SIZE >= 1
+
+
+def test_motion_magnitude_calculation():
+    """Verify optical flow motion calculation for static vs dynamic video frames."""
+    # Empty / None frames return 0.0
+    assert compute_motion_magnitude(None, None) == 0.0
+    assert compute_motion_magnitude(np.array([]), np.array([])) == 0.0
+
+    # Static identical frames return 0.0
+    frame_static_a = np.zeros((90, 160, 3), dtype=np.uint8)
+    frame_static_b = np.zeros((90, 160, 3), dtype=np.uint8)
+    assert compute_motion_magnitude(frame_static_a, frame_static_b) == 0.0
+
+    # Moving textured block displacement
+    frame_motion_a = np.zeros((90, 160, 3), dtype=np.uint8)
+    frame_motion_a[20:60, 30:70] = 255
+    frame_motion_b = np.zeros((90, 160, 3), dtype=np.uint8)
+    frame_motion_b[20:60, 50:90] = 255
+    motion_val = compute_motion_magnitude(frame_motion_a, frame_motion_b)
+    assert motion_val > 0.0, f"Expected positive motion magnitude, got {motion_val}"
+
+
+def test_heuristic_engagement_score_bounds():
+    """Verify engagement score boundary normalization in [0.0, 1.0]."""
+    # Empty frame fallback
+    assert heuristic_engagement_score(None, 0.0) == 0.0
+    assert heuristic_engagement_score(np.array([]), 2.5) == 0.0
+
+    # Uniform dark frame with zero motion
+    dark_frame = np.zeros((90, 160, 3), dtype=np.uint8)
+    score_dark = heuristic_engagement_score(dark_frame, 0.0)
+    assert 0.0 <= score_dark <= 0.1
+
+    # Dynamic high texture frame with motion
+    texture_frame = np.random.randint(0, 256, (90, 160, 3), dtype=np.uint8)
+    score_dynamic = heuristic_engagement_score(texture_frame, 4.5)
+    assert 0.0 <= score_dynamic <= 1.0
+    assert score_dynamic > score_dark
+
+
+def test_storage_service_safe_local_path():
+    """Verify safe path normalization in StorageService."""
+    storage = StorageService()
+    path = storage._local_path("raw_videos/user 123/intro hook.mp4")
+    assert "raw_videos_user_123_intro_hook.mp4" in path
+    assert LOCAL_STORAGE_DIR in path
 
 
 if __name__ == "__main__":
