@@ -157,5 +157,38 @@ def test_storage_service_safe_local_path():
     assert LOCAL_STORAGE_DIR in path
 
 
+def test_thumbnail_metrics_computation():
+    """Verify thumbnail aesthetic scoring, contrast, sharpness, and colorfulness metrics."""
+    from app.services.video_processor import video_processor
+
+    # 1. Empty / None frame fallback
+    empty_res = video_processor.compute_thumbnail_metrics(None)
+    assert empty_res["thumbnail_score"] == 0.0
+    assert empty_res["is_recommended"] is False
+
+    # 2. Black frame (low brightness, 0 contrast, 0 colorfulness)
+    black_frame = np.zeros((100, 100, 3), dtype=np.uint8)
+    black_res = video_processor.compute_thumbnail_metrics(black_frame)
+    assert black_res["brightness"] == 0.0
+    assert black_res["contrast"] == 0.0
+    assert black_res["colorfulness"] == 0.0
+    assert black_res["thumbnail_score"] < 40.0
+    assert black_res["is_recommended"] is False
+
+    # 3. Colorful contrast frame (Checkerboard + colorful gradients)
+    vibrant_frame = np.zeros((120, 160, 3), dtype=np.uint8)
+    vibrant_frame[:60, :80] = [255, 0, 0]      # Blue
+    vibrant_frame[:60, 80:] = [0, 255, 0]      # Green
+    vibrant_frame[60:, :80] = [0, 0, 255]      # Red
+    vibrant_frame[60:, 80:] = [255, 255, 0]    # Cyan
+
+    vibrant_res = video_processor.compute_thumbnail_metrics(vibrant_frame)
+    assert vibrant_res["brightness"] > 0.3
+    assert vibrant_res["contrast"] > 0.4
+    assert vibrant_res["colorfulness"] > 15.0
+    assert vibrant_res["sharpness"] > 0.0
+    assert 0.0 <= vibrant_res["thumbnail_score"] <= 100.0
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
