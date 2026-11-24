@@ -16,7 +16,7 @@ AI video engagement analytics engine with frame-by-frame attention scoring, heat
 - **Automated Attention Drop Isolation:** 1D convolution smoothing kernel automatically marks drop segments and categorizes drop severity (`critical`, `high`, `medium`, `low`).
 - **Hook & Virality Metrics:** Identifies retention drop-off in the first 3 seconds to optimize video hooks and opening pacing.
 - **Fast Analytics Processing:** Asynchronous background processing with real-time progress status updates.
-- **Multi-Platform Ready:** Next.js 14 responsive web dashboard and React Native mobile companion app.
+- **Web dashboard and mobile scaffold:** Next.js 14 responsive web dashboard and mobile companion scaffold (not built or tested).
 
 ## Tech Stack
 - **Frontend:** Next.js 14, TypeScript, Tailwind CSS, Recharts, Framer Motion
@@ -104,7 +104,7 @@ flowchart TD
 - [ ] Speech-to-text transcript correlation with attention valleys
 
 ## What I Learned
-- Full 4K dense optical flow is completely unsustainable for real-time video analytics without costly GPUs; downscaling proxy frames to 160x90 cuts compute by over 95% while retaining motion fidelity.
+- Full 4K dense optical flow is completely unsustainable for real-time video analytics without costly GPUs; downscaling proxy frames to 160x90 processes about 99% fewer pixels than 1080p. Runtime was not benchmarked.
 - Applying a 1D convolution smoothing filter eliminates noisy 1-second cuts from falsely registering as engagement drops.
 
 ## Author
