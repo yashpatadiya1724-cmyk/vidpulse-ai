@@ -132,3 +132,40 @@ def test_analyze_frames_integration():
         assert "retention_pct" in item
         assert "focal_concentration" in item
         assert "centroid" in item
+
+
+def test_retention_profile_steady_burn():
+    """Moderate hook score and steady engagement should classify as steady_burn."""
+    timeline_scores = [0.70] * 20
+    curve = compute_retention_curve(timeline_scores, hook_score=60, drops=[])
+    assert curve["drop_off_velocity_3s"] < 25.0
+    assert curve["final_retention"] >= 30.0
+    assert curve["retention_profile"] in ["steady_burn", "viral_hook"]
+
+
+def test_retention_profile_flatliner_and_half_life():
+    """Sustained low engagement should deplete audience and calculate valid half_life_sec."""
+    timeline_scores = [0.10] * 60
+    curve = compute_retention_curve(timeline_scores, hook_score=45, drops=[])
+    assert curve["retention_profile"] == "flatliner"
+    assert curve["final_retention"] < 30.0
+    assert curve["half_life_sec"] is not None
+    assert 0 < curve["half_life_sec"] < len(timeline_scores)
+    # Check that at half_life_sec, retention is indeed <= 50.0%
+    half_pt = next(p for p in curve["retention_points"] if p["second"] == curve["half_life_sec"])
+    assert half_pt["retention_pct"] <= 50.0
+
+
+def test_heatmap_warning_level_and_safe_boundaries():
+    """Verify threshold boundary classifications in heat intensity mapping."""
+    timeline_scores = [0.95, 0.38, 0.50]
+    heatmap = generate_hook_dropoff_heatmap(timeline_scores, drops=[])
+    assert len(heatmap) == 3
+    assert heatmap[0]["risk_level"] == "safe"
+    assert heatmap[0]["heat_intensity"] <= 0.1
+    # Score 0.38 < 0.40 without drop should classify as warning
+    assert heatmap[1]["risk_level"] == "warning"
+    assert heatmap[1]["heat_intensity"] == 0.65
+    # Score 0.50 should classify as safe
+    assert heatmap[2]["risk_level"] == "safe"
+
